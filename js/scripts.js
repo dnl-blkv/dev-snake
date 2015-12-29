@@ -419,7 +419,9 @@ function tick (timestamp) {
     oldTime = d.getTime();
   }
 
-  timerId = requestAnimationFrame(tick);
+  if (game.isRunning()) {
+    timerId = requestAnimationFrame(tick);
+  }
 }
 
 function stop () {

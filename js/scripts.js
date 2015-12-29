@@ -9,9 +9,15 @@ var requestAnimationFrame = window.requestAnimationFrame ||
 var cancelAnimationFrame = window.cancelAnimationFrame ||
     window.mozCancelAnimationFrame;
 
-function getRandomInt(min, max) {
+function getRandomInt (min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+function getUnixTimeMs () {
+  var date = new Date();
+  return date.getTime();
+}
+
 //==============================================================================
 //==================================CONSTANTS===================================
 //==============================================================================
@@ -370,19 +376,22 @@ Game.prototype.draw = function () {
 //=====================================GAME=====================================
 //==============================================================================
 var game = new Game();
-
 var timerId = 0;
+var oldTime, newTime;
+oldTime = getUnixTimeMs();
 
-var oldTime, newTime, d;
-d = new Date();
-oldTime = d.getTime();
+function reset () {
+  game = new Game();
+  timerId = 0;
+  oldTime = 0;
+  newTime = 0;
+}
 
 function tick (timestamp) {
   var snake = game.getSnake();
   var apple = game.getApple();
 
-  d = new Date();
-  newTime = d.getTime();
+  newTime = getUnixTimeMs();
 
   if (newTime - oldTime >= FRAME_LENGTH) {
     // Move the snake and eat the apple
@@ -394,7 +403,7 @@ function tick (timestamp) {
 
     if (snake.isStunned()) {
       stop();
-      game.setStatus("Game Over!");
+      game.setStatus("Game Over! | Press ENTER to reset");
       game.setRunning(false);
       game.setOver(true);
       // Draw the frame
@@ -415,8 +424,7 @@ function tick (timestamp) {
       }
     }
 
-    d = new Date();
-    oldTime = d.getTime();
+    oldTime = getUnixTimeMs();
   }
 
   if (game.isRunning()) {
@@ -440,18 +448,24 @@ game.draw();
 document.addEventListener("keydown", function(e){
 
   switch (e.keyCode) {
+    case 13:
+      if (game.isOver()) {
+        reset();
+        game.draw();
+      }
+      break;
     case 32:
-        if (!game.isOver()) {
-          if (game.isRunning()) {
-            var snake = game.getSnake();
-            snake.blockDirectionChange();
-            game.setStatus("Paused");
-            game.draw();
-            stop();
-          } else {
-            run();
-          }
+      if (!game.isOver()) {
+        if (game.isRunning()) {
+          var snake = game.getSnake();
+          snake.blockDirectionChange();
+          game.setStatus("Paused");
+          game.draw();
+          stop();
+        } else {
+          run();
         }
+      }
       break;
     default:
       break;

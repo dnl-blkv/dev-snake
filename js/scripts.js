@@ -265,15 +265,20 @@ function Game () {
   this.frameId = 0;
   this.score = 0;
   this.status = "Press SPACE to start";
+  this.frameHeader = "";
   this.running = false;
   this.gameOver = false;
   this.field = new Field();
   this.snake = new Snake();
   this.apple = generateApple();
+  updateFrameHeader(this);
 }
 
 Game.prototype.incrementFrameId = function () {
   ++this.frameId;
+  if (this.testMode) {
+    updateFrameHeader(this);
+  }
 };
 
 Game.prototype.getFrameId = function () {
@@ -286,6 +291,7 @@ Game.prototype.getScore = function () {
 
 Game.prototype.setStatus = function (status) {
   this.status = status;
+  updateFrameHeader(this);
 };
 
 Game.prototype.getStatus = function () {
@@ -310,6 +316,7 @@ Game.prototype.isOver = function () {
 
 Game.prototype.incrementScore = function () {
   ++this.score;
+  updateFrameHeader(this);
 };
 
 Game.prototype.getField = function () {
@@ -335,7 +342,7 @@ function generateApple () {
   };
 }
 
-function getFrameHeader (game) {
+function updateFrameHeader (game) {
   var frameHeader = "";
 
   for (var j = 0; j < HEIGHT; ++j) {
@@ -350,7 +357,11 @@ function getFrameHeader (game) {
   frameHeader += "Score: " + game.getScore();
   frameHeader += " | " + game.getStatus();
 
-  return frameHeader;
+  game.frameHeader = frameHeader;
+}
+
+function getFrameHeader (game) {
+  return game.frameHeader;
 }
 
 function printFrameHeader (game) {

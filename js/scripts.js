@@ -402,12 +402,12 @@ function tick (timestamp) {
     }
 
     if (snake.isStunned()) {
-      stop();
       game.setStatus("Game Over! | Press ENTER to reset");
       game.setRunning(false);
       game.setOver(true);
       // Draw the frame
       game.draw();
+      stop();
     } else {
 
       // Draw the frame
@@ -429,6 +429,8 @@ function tick (timestamp) {
 
   if (game.isRunning()) {
     timerId = requestAnimationFrame(tick);
+  } else {
+    cancelAnimationFrame(timerId);
   }
 }
 

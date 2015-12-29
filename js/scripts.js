@@ -1,8 +1,24 @@
 //==============================================================================
+//==================================UTILITIES===================================
+//==============================================================================
+var requestAnimationFrame = window.requestAnimationFrame ||
+    window.mozRequestAnimationFrame ||
+    window.webkitRequestAnimationFrame ||
+    window.msRequestAnimationFrame;
+
+var cancelAnimationFrame = window.cancelAnimationFrame ||
+    window.mozCancelAnimationFrame;
+
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+//==============================================================================
 //==================================CONSTANTS===================================
 //==============================================================================
 var WIDTH = 40;
 var HEIGHT = 20;
+var FPS = 15;
+var FRAME_LENGTH = 1000 / FPS;
 
 var DIR = {
   'LEFT': 0,
@@ -236,45 +252,75 @@ Field.prototype.getFullText = function (snake, apple) {
 };
 
 //==============================================================================
-//=====================================GAME=====================================
+//=============================GAME CLASS DEFINITION============================
 //==============================================================================
-
-var testMode = false;
-var frameId = 0;
-var score = 0;
-var status = "Press SPACE to start";
-var running = false;
-var gameOver = false;
-
-function printFrameHeader () {
-  var frameHeader = "";
-
-  for (var j = 0; j < HEIGHT; ++j) {
-    frameHeader += '\n';
-  }
-
-  if (testMode) {
-    frameHeader += "Frame: " + frameId;
-    frameHeader += " | ";
-  }
-
-  frameHeader += "Score: " + score;
-  frameHeader += " | " + status;
-
-  console.log(frameHeader);
+function Game () {
+  this.testMode = false;
+  this.frameId = 0;
+  this.score = 0;
+  this.status = "Press SPACE to start";
+  this.running = false;
+  this.gameOver = false;
+  this.field = new Field();
+  this.snake = new Snake();
+  this.apple = generateApple();
 }
 
-var field = new Field();
+Game.prototype.incrementFrameId = function () {
+  ++this.frameId;
+};
 
-var snake = new Snake();
+Game.prototype.getFrameId = function () {
+  return this.frameId;
+};
 
-var apple = generateApple();
+Game.prototype.getScore = function () {
+  return this.score;
+};
 
-var timerId = 0;
+Game.prototype.setStatus = function (status) {
+  this.status = status;
+};
 
-function getRandomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+Game.prototype.getStatus = function () {
+  return this.status;
+};
+
+Game.prototype.setRunning = function (running) {
+  this.running = running;
+};
+
+Game.prototype.isRunning = function () {
+  return this.running;
+};
+
+Game.prototype.setOver = function (gameOver) {
+  this.gameOver = gameOver;
+};
+
+Game.prototype.isOver = function () {
+  return this.gameOver;
+};
+
+Game.prototype.incrementScore = function () {
+  ++this.score;
+};
+
+Game.prototype.getField = function () {
+  return this.field;
+};
+
+Game.prototype.getSnake = function () {
+  return this.snake;
+};
+
+Game.prototype.getApple = function () {
+  return this.apple;
+};
+
+Game.prototype.dropApple = function () {
+  this.apple = generateApple();
+};
 
 function generateApple () {
   return {
@@ -283,76 +329,125 @@ function generateApple () {
   };
 }
 
-function drawField () {
+function getFrameHeader (game) {
+  var frameHeader = "";
+
+  for (var j = 0; j < HEIGHT; ++j) {
+    frameHeader += '\n';
+  }
+
+  if (this.testMode) {
+    frameHeader += "Frame: " + game.getFrameId();
+    frameHeader += " | ";
+  }
+
+  frameHeader += "Score: " + game.getScore();
+  frameHeader += " | " + game.getStatus();
+
+  return frameHeader;
+}
+
+function printFrameHeader (game) {
+  var frameHeader = getFrameHeader(game);
+  console.log(frameHeader);
+}
+
+function drawField (game) {
+  var field = game.getField();
+  var snake = game.getSnake();
+  var apple = game.getApple();
   var fieldText = field.getFullText(snake, apple);
   console.log(fieldText);
 }
 
-function draw () {
+Game.prototype.draw = function () {
+  printFrameHeader(this);
 
-  printFrameHeader();
+  drawField(this);
+};
 
-  drawField();
-}
+//==============================================================================
+//=====================================GAME=====================================
+//==============================================================================
+var game = new Game();
 
-drawField();
+var timerId = 0;
 
-function tick () {
-  // Move the snake and eat the apple
-  snake.move();
-  if (snake.eatApple(apple)) {
-    ++score;
-    apple = generateApple()
-  }
+var oldTime, newTime, d;
+d = new Date();
+oldTime = d.getTime();
 
-  if (snake.isStunned()) {
-    stop();
-    status = "Game Over!";
-    running = false;
-    gameOver = true;
-    // Draw the frame
-    draw();
-  } else {
+function tick (timestamp) {
+  var snake = game.getSnake();
+  var apple = game.getApple();
 
-    // Draw the frame
-    draw();
+  d = new Date();
+  newTime = d.getTime();
 
-    // Increase the frame counter
-    ++frameId;
-    snake.updateFrameId(frameId);
-    if (frameId % 200 === 0) {
-      // Clear the console every N frames
-      console.clear();
-      draw();
+  if (newTime - oldTime >= FRAME_LENGTH) {
+    // Move the snake and eat the apple
+    snake.move();
+    if (snake.eatApple(apple)) {
+      game.incrementScore();
+      game.dropApple();
     }
+
+    if (snake.isStunned()) {
+      stop();
+      game.setStatus("Game Over!");
+      game.setRunning(false);
+      game.setOver(true);
+      // Draw the frame
+      game.draw();
+    } else {
+
+      // Draw the frame
+      game.draw();
+
+      // Increase the frame counter
+      game.incrementFrameId();
+      var frameId = game.getFrameId();
+      snake.updateFrameId(frameId);
+      if (frameId % 200 === 0) {
+        // Clear the console every N frames
+        console.clear();
+        game.draw();
+      }
+    }
+
+    d = new Date();
+    oldTime = d.getTime();
   }
+
+  timerId = requestAnimationFrame(tick);
 }
 
 function stop () {
-  clearInterval(timerId);
+  cancelAnimationFrame(timerId);
+  game.setRunning(false);
 }
 
 function run () {
-  timerId = setInterval(tick, 100);
-  status = "Running";
-  running = true;
+  timerId = requestAnimationFrame(tick);
+  game.setStatus("Running");
+  game.setRunning(true);
 }
 
-draw();
+game.draw();
 
 document.addEventListener("keydown", function(e){
 
   switch (e.keyCode) {
     case 32:
-        if (!gameOver) {
-          if (!running) {
-            run();
-          } else {
+        if (!game.isOver()) {
+          if (game.isRunning()) {
+            var snake = game.getSnake();
             snake.blockDirectionChange();
-            status = "Paused";
-            running = false;
-            draw();
+            game.setStatus("Paused");
+            game.draw();
             stop();
+          } else {
+            run();
           }
         }
       break;

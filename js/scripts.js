@@ -439,7 +439,7 @@ function stop () {
 
 function run () {
   timerId = requestAnimationFrame(tick);
-  game.setStatus("Running");
+  game.setStatus("Running | Press SPACE to pause");
   game.setRunning(true);
 }
 
@@ -459,7 +459,7 @@ document.addEventListener("keydown", function(e){
         if (game.isRunning()) {
           var snake = game.getSnake();
           snake.blockDirectionChange();
-          game.setStatus("Paused");
+          game.setStatus("Paused | Press SPACE to continue");
           game.draw();
           stop();
         } else {

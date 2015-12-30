@@ -98,7 +98,8 @@ function addPart (snake, x, y) {
 }
 
 function isAppleEatable (snake, apple) {
-  var head = snake.parts[0];
+  var parts = snake.getParts();
+  var head = parts[0];
 
   return ((head.x === apple.x) && (head.y === apple.y));
 }
@@ -120,8 +121,11 @@ Snake.prototype.isStunned = function () {
 };
 
 Snake.prototype.eatApple = function (apple) {
+  var parts = this.getParts();
+  var tail = parts[parts.length - 1];
+
   if (isAppleEatable(this, apple)) {
-    addPart(this, apple.x, apple.y);
+    addPart(this, tail.x, tail.y);
     return true;
   }
 
@@ -144,7 +148,7 @@ Snake.prototype.move = function () {
     'x': tail.x,
     'y': tail.y
   };
-  var partId = 0;
+  var partId;
 
   for (partId = (parts.length - 1); 0 < partId; --partId) {
     parts[partId].x = parts[partId - 1].x;
@@ -181,24 +185,30 @@ Snake.prototype.move = function () {
 //============================FIELD CLASS DEFINITION============================
 //==============================================================================
 function Field () {
-  this.lines = [];
+  this.text = "";
+  this.oldSnakeTail = {
+    "x": -1,
+    "y": -1
+  };
 
-  this.buildLines();
+  buildText(this);
 }
 
-Field.prototype.getLines = function () {
-  return this.lines;
+Field.prototype.getText = function () {
+  return this.text;
 };
 
-Field.prototype.buildLines = function () {
+function buildText (field) {
   var i;
   var horizontalBorder = "";
+
+  field.text = "";
 
   for (i = 0; i < (WIDTH + 2); ++ i) {
     horizontalBorder += "#";
   }
 
-  this.lines.push(horizontalBorder + '\n');
+  field.text += horizontalBorder + '\n';
 
   var fieldLine = "#";
 
@@ -209,53 +219,76 @@ Field.prototype.buildLines = function () {
   fieldLine += "#";
 
   for (i = 0; i < HEIGHT; ++ i) {
-    this.lines.push(fieldLine + '\n');
+    field.text += fieldLine + '\n';
   }
 
-  this.lines.push(horizontalBorder);
-};
+  field.text += horizontalBorder;
+}
 
 // Get text with snake and apple
 Field.prototype.getFullText = function (snake, apple) {
-  var linesWithSnake = [];
-  var lines = this.getLines();
+  var text = this.getText();
 
+  // Build a snake parts map
   var snakeParts = snake.getParts();
-  var partsMap = {};
 
-  for (var partNum = 0; partNum < snakeParts.length; ++ partNum) {
-    var part = snakeParts[partNum];
+  // If the old apple coordinate is negative then no apple has ever been spawned
+  if (this.oldSnakeTail.x < 0) {
+    // Full version of the method
+    var partsMap = {};
 
-    if (partsMap[part.y] === undefined) {
-      partsMap[part.y] = [part.x];
-    } else {
-      partsMap[part.y].push(part.x);
-    }
-  }
+    for (var partNum = 0; partNum < snakeParts.length; ++partNum) {
+      var part = snakeParts[partNum];
 
-  var lineArray;
-
-  for (var lineNum = 0; lineNum < lines.length; ++lineNum) {
-    var snakePositions = partsMap[lineNum - 1];
-    var fieldLine = lines[lineNum];
-
-    if (snakePositions === undefined) {
-      linesWithSnake[lineNum] = fieldLine;
-    } else {
-      lineArray = fieldLine.split("");
-      for (var charNum = 0; charNum < snakePositions.length; ++charNum) {
-        lineArray[snakePositions[charNum] + 1] = "@";
+      if (partsMap[part.y] === undefined) {
+        partsMap[part.y] = [part.x];
+      } else {
+        partsMap[part.y].push(part.x);
       }
-      linesWithSnake[lineNum] = lineArray.join("");
     }
+
+    var partsMapKeys = Object.keys(partsMap);
+
+    for (var partsMapKeyNum = 0; partsMapKeyNum < partsMapKeys.length; ++partsMapKeyNum) {
+      // Corresponds to y coordinates of snake elements contained in a current line
+      var y = partsMapKeys[partsMapKeyNum];
+
+      // partsMapLines contains x coordinates of the snake elements
+      var partsMapLine = partsMap[y];
+
+      for (var charNum = 0; charNum < partsMapLine.length; ++charNum) {
+        var x = partsMapLine[charNum];
+
+        var partPosition = getTextPosition(y, x);
+        text = text.substr(0, partPosition) + "@" + text.substr(partPosition + 1);
+      }
+    }
+  } else {
+    if ((this.oldSnakeTail.x !== snakeParts[snakeParts.length - 1].x) ||
+        (this.oldSnakeTail.y !== snakeParts[snakeParts.length - 1].y)) {
+      var oldTailPosition = getTextPosition(this.oldSnakeTail.y, this.oldSnakeTail.x);
+      text = text.substr(0, oldTailPosition) + " " + text.substr(oldTailPosition + 1);
+    }
+
+    var newHeadPosition = getTextPosition(snakeParts[0].y, snakeParts[0].x);
+    text = text.substr(0, newHeadPosition) + "@" + text.substr(newHeadPosition + 1);
   }
 
-  lineArray = linesWithSnake[apple.y + 1].split("");
-  lineArray[apple.x + 1] = "$";
-  linesWithSnake[apple.y + 1] = lineArray.join("");
+  var applePosition = getTextPosition(apple.y, apple.x);
+  text = text.substr(0, applePosition) + "$" + text.substr(applePosition + 1);
 
-  return linesWithSnake.join("");
+  // Save the new old snake tail coordinates
+  this.oldSnakeTail.y = snakeParts[snakeParts.length - 1].y;
+  this.oldSnakeTail.x = snakeParts[snakeParts.length - 1].x;
+
+  this.text = text;
+
+  return this.text;
 };
+
+function getTextPosition(y, x) {
+  return (WIDTH + 3) * (y * 1 + 1) + x * 1 + 1;
+}
 
 //==============================================================================
 //=============================GAME CLASS DEFINITION============================

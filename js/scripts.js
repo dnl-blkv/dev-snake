@@ -43,6 +43,9 @@ function getUnixTimeMs () {
 //==============================================================================
 //==================================CONSTANTS===================================
 //==============================================================================
+// Test mode switcher
+var TEST = false;
+
 // Dimensions of the snake field
 var HEIGHT = 20;
 var WIDTH = 40;
@@ -54,7 +57,7 @@ var FPS = 15;
 var FRAME_LENGTH = 1000 / FPS;
 
 // Enumerated values describing directions of the snake movement
-var DIR = {
+var DIRECTION = {
   'LEFT': 0,
   'UP': 1,
   'RIGHT': 2,
@@ -73,7 +76,7 @@ function Snake () {
   this.homeHeight = HEIGHT;
 
   // Direction of the snake
-  this.direction = DIR.RIGHT;
+  this.direction = DIRECTION.RIGHT;
 
   // Indicator of snake being stunned
   this.stunned = false;
@@ -109,23 +112,23 @@ function addMovementListener (snake) {
     if (snake.lastDirectionChangeFrameId < snake.frameId) {
       switch (e.keyCode) {
         case 37:
-          if (snake.direction !== DIR.RIGHT) {
-            snake.direction = DIR.LEFT;
+          if (snake.direction !== DIRECTION.RIGHT) {
+            snake.direction = DIRECTION.LEFT;
           }
           break;
         case 38:
-          if (snake.direction !== DIR.DOWN) {
-            snake.direction = DIR.UP;
+          if (snake.direction !== DIRECTION.DOWN) {
+            snake.direction = DIRECTION.UP;
           }
           break;
         case 39:
-          if (snake.direction !== DIR.LEFT) {
-            snake.direction = DIR.RIGHT;
+          if (snake.direction !== DIRECTION.LEFT) {
+            snake.direction = DIRECTION.RIGHT;
           }
           break;
         case 40:
-          if (snake.direction !== DIR.UP) {
-            snake.direction = DIR.DOWN;
+          if (snake.direction !== DIRECTION.UP) {
+            snake.direction = DIRECTION.DOWN;
           }
           break;
         default:
@@ -193,11 +196,6 @@ Snake.prototype.getDirection = function () {
 Snake.prototype.move = function () {
   var parts = this.getParts();
   var head = parts[0];
-  var tail = parts[parts.length - 1];
-  var oldTail = {
-    'x': tail.x,
-    'y': tail.y
-  };
   var partId;
 
   for (partId = (parts.length - 1); 0 < partId; --partId) {
@@ -207,16 +205,16 @@ Snake.prototype.move = function () {
 
   // Update head
   switch (this.getDirection()) {
-    case DIR.LEFT:
+    case DIRECTION.LEFT:
       head.x = (head.x - 1 + this.homeWidth) % this.homeWidth;
       break;
-    case DIR.UP:
+    case DIRECTION.UP:
       head.y = (head.y - 1 + this.homeHeight) % this.homeHeight;
       break;
-    case DIR.RIGHT:
+    case DIRECTION.RIGHT:
       head.x = (head.x + 1 + this.homeWidth) % this.homeWidth;
       break;
-    case DIR.DOWN:
+    case DIRECTION.DOWN:
       head.y = (head.y + 1 + this.homeHeight) % this.homeHeight;
       break;
     default:
@@ -224,8 +222,7 @@ Snake.prototype.move = function () {
   }
 
   for (partId = 1; partId < parts.length; ++partId) {
-    if (((head.x === parts[partId].x) && (head.y === parts[partId]. y)) ||
-        ((head.x === oldTail.x) && (head.y === oldTail.y))) {
+    if ((head.x === parts[partId].x) && (head.y === parts[partId]. y)) {
       becomeStunned(this);
     }
   }
@@ -367,7 +364,6 @@ function getTextPosition(field, y, x) {
 //=============================GAME CLASS DEFINITION============================
 //==============================================================================
 function Game () {
-  this.testMode = false;
   this.frameId = 0;
   this.score = 0;
   this.status = "Press SPACE to start";
@@ -382,7 +378,7 @@ function Game () {
 
 Game.prototype.incrementFrameId = function () {
   ++this.frameId;
-  if (this.testMode) {
+  if (TEST) {
     updateFrameHeader(this);
   }
 };
@@ -457,7 +453,7 @@ function updateFrameHeader (game) {
     frameHeader += "\n";
   }
 
-  if (this.testMode) {
+  if (TEST) {
     frameHeader += "Frame: " + game.getFrameId();
     frameHeader += " | ";
   }
@@ -506,7 +502,7 @@ function reset () {
   newTime = 0;
 }
 
-function tick (timestamp) {
+function tick () {
   var snake = game.getSnake();
   var apple = game.getApple();
 

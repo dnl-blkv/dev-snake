@@ -43,11 +43,17 @@ function getUnixTimeMs () {
 //==============================================================================
 //==================================CONSTANTS===================================
 //==============================================================================
-var WIDTH = 40;
+// Dimensions of the snake field
 var HEIGHT = 20;
+var WIDTH = 40;
+
+// Amount of frames per second also defining the snake moving speed
 var FPS = 15;
+
+// The frame length parameter used to determine the pause between frames
 var FRAME_LENGTH = 1000 / FPS;
 
+// Enumerated values describing directions of the snake movement
 var DIR = {
   'LEFT': 0,
   'UP': 1,
@@ -59,21 +65,42 @@ var DIR = {
 //============================SNAKE CLASS DEFINITION============================
 //==============================================================================
 function Snake () {
+  // Array of coordinates of snake parts
   this.parts = [];
+
+  // Size of the field in which the snake lives
   this.homeWidth = WIDTH;
   this.homeHeight = HEIGHT;
+
+  // Direction of the snake
   this.direction = DIR.RIGHT;
+
+  // Indicator of snake being stunned
   this.stunned = false;
+
+  // ID of the last frame the snake was updated
   this.frameId = 0;
+
+  // ID of the last frame the snake changed its directions
   this.lastDirectionChangeFrameId = 0;
 
-  addPart(this, (this.homeWidth / 2.0) + 2.0, (this.homeHeight / 2.0));
-  addPart(this, (this.homeWidth / 2.0) + 1.0, (this.homeHeight / 2.0));
-  addPart(this, (this.homeWidth / 2.0), (this.homeHeight / 2.0));
-  addPart(this, (this.homeWidth / 2.0) - 1.0, (this.homeHeight / 2.0));
-  addPart(this, (this.homeWidth / 2.0) - 2.0, (this.homeHeight / 2.0));
+  // Build the initial snake in the middle of its home
+  var midY = (this.homeHeight / 2.0);
+  var midX = (this.homeWidth / 2.0);
+  addPart(this, midY, midX + 2.0);
+  addPart(this, midY, midX + 1.0);
+  addPart(this, midY, midX);
+  addPart(this, midY, midX - 1.0);
+  addPart(this, midY, midX - 2.0);
 
-  var snake = this;
+  // Add event listener for the snake movement
+  addMovementListener(this);
+}
+
+// Adds an event listener for the snake movement; the listener responds to the
+// key presses and updates the snake direction accordingly, but not more often
+// than once per frame.
+function addMovementListener (snake) {
 
   document.addEventListener("keydown", function(e){
 
@@ -112,10 +139,11 @@ function Snake () {
   });
 }
 
-function addPart (snake, x, y) {
+// Add a new part with a given (y, x) location
+function addPart (snake, y, x) {
   snake.parts.push({
-    'x': x,
-    'y': y
+    'y': y,
+    'x': x
   });
 }
 
@@ -147,7 +175,7 @@ Snake.prototype.eatApple = function (apple) {
   var tail = parts[parts.length - 1];
 
   if (isAppleEatable(this, apple)) {
-    addPart(this, tail.x, tail.y);
+    addPart(this, tail.y, tail.x);
     return true;
   }
 
@@ -203,59 +231,15 @@ Snake.prototype.move = function () {
   }
 };
 
-//==============================================================================
-//============================FIELD CLASS DEFINITION============================
-//==============================================================================
-function Field () {
-  this.text = "";
-  this.oldSnakeTail = {
-    "x": -1,
-    "y": -1
-  };
-
-  buildText(this);
-}
-
-Field.prototype.getText = function () {
-  return this.text;
-};
-
-function buildText (field) {
-  var i;
-  var horizontalBorder = "";
-
-  field.text = "";
-
-  for (i = 0; i < (WIDTH + 2); ++ i) {
-    horizontalBorder += "#";
-  }
-
-  field.text += horizontalBorder + '\n';
-
-  var fieldLine = "#";
-
-  for (i = 0; i < WIDTH; ++ i) {
-    fieldLine += " ";
-  }
-
-  fieldLine += "#";
-
-  for (i = 0; i < HEIGHT; ++ i) {
-    field.text += fieldLine + '\n';
-  }
-
-  field.text += horizontalBorder;
-}
-
-// Get text with snake and apple
-Field.prototype.getFullText = function (snake, apple) {
-  var text = this.getText();
+// Draw the snake on a field
+Snake.prototype.draw = function (field) {
+  var text = field.getText();
 
   // Build a snake parts map
-  var snakeParts = snake.getParts();
+  var snakeParts = this.getParts();
 
   // If the old apple coordinate is negative then no apple has ever been spawned
-  if (this.oldSnakeTail.x < 0) {
+  if (field.oldSnakeTail.x < 0) {
     // Full version of the method
     var partsMap = {};
 
@@ -281,35 +265,102 @@ Field.prototype.getFullText = function (snake, apple) {
       for (var charNum = 0; charNum < partsMapLine.length; ++charNum) {
         var x = partsMapLine[charNum];
 
-        var partPosition = getTextPosition(y, x);
+        var partPosition = getTextPosition(field, y, x);
         text = text.substr(0, partPosition) + "@" + text.substr(partPosition + 1);
       }
     }
   } else {
-    if ((this.oldSnakeTail.x !== snakeParts[snakeParts.length - 1].x) ||
-        (this.oldSnakeTail.y !== snakeParts[snakeParts.length - 1].y)) {
-      var oldTailPosition = getTextPosition(this.oldSnakeTail.y, this.oldSnakeTail.x);
+    if ((field.oldSnakeTail.x !== snakeParts[snakeParts.length - 1].x) ||
+        (field.oldSnakeTail.y !== snakeParts[snakeParts.length - 1].y)) {
+      var oldTailPosition = getTextPosition(field, field.oldSnakeTail.y, field.oldSnakeTail.x);
       text = text.substr(0, oldTailPosition) + " " + text.substr(oldTailPosition + 1);
     }
 
-    var newHeadPosition = getTextPosition(snakeParts[0].y, snakeParts[0].x);
+    var newHeadPosition = getTextPosition(field, snakeParts[0].y, snakeParts[0].x);
     text = text.substr(0, newHeadPosition) + "@" + text.substr(newHeadPosition + 1);
   }
 
-  var applePosition = getTextPosition(apple.y, apple.x);
-  text = text.substr(0, applePosition) + "$" + text.substr(applePosition + 1);
-
   // Save the new old snake tail coordinates
-  this.oldSnakeTail.y = snakeParts[snakeParts.length - 1].y;
-  this.oldSnakeTail.x = snakeParts[snakeParts.length - 1].x;
+  field.oldSnakeTail.y = snakeParts[snakeParts.length - 1].y;
+  field.oldSnakeTail.x = snakeParts[snakeParts.length - 1].x;
+
+  // TODO: use getters/setters to access the properties of field
+  field.text = text;
+};
+
+//==============================================================================
+//============================FIELD CLASS DEFINITION============================
+//==============================================================================
+function Field () {
+  this.width = WIDTH;
+  this.height = HEIGHT;
+  this.text = "";
+  this.oldSnakeTail = {
+    "x": -1,
+    "y": -1
+  };
+
+  buildText(this);
+}
+
+Field.prototype.getWidth = function () {
+  return this.width;
+};
+
+Field.prototype.getHeight = function () {
+  return this.height;
+};
+
+Field.prototype.getText = function () {
+  return this.text;
+};
+
+function buildText (field) {
+  var i;
+  var horizontalBorder = "";
+
+  field.text = "";
+
+  for (i = 0; i < (field.getWidth() + 2); ++ i) {
+    horizontalBorder += "#";
+  }
+
+  field.text += horizontalBorder + '\n';
+
+  var fieldLine = "#";
+
+  for (i = 0; i < field.getWidth(); ++ i) {
+    fieldLine += " ";
+  }
+
+  fieldLine += "#";
+
+  for (i = 0; i < field.getHeight(); ++ i) {
+    field.text += fieldLine + '\n';
+  }
+
+  field.text += horizontalBorder;
+}
+
+// Get text with snake and apple
+Field.prototype.getFullText = function (snake, apple) {
+
+  // Draw the snake
+  snake.draw(this);
+
+  var text = this.text;
+
+  // Print the apple
+  var applePosition = getTextPosition(this, apple.y, apple.x);
+  text = text.substr(0, applePosition) + "$" + text.substr(applePosition + 1);
 
   this.text = text;
 
   return this.text;
 };
 
-function getTextPosition(y, x) {
-  return (WIDTH + 3) * (y * 1 + 1) + x * 1 + 1;
+function getTextPosition(field, y, x) {
+  return (field.getWidth() + 3) * (y * 1 + 1) + x * 1 + 1;
 }
 
 //==============================================================================
